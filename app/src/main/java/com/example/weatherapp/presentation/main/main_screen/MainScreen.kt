@@ -17,16 +17,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,51 +43,64 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.weatherapp.R
 import com.example.weatherapp.common.Constants
 import com.example.weatherapp.domain.model.ForecastType
+import com.example.weatherapp.presentation.main.main_screen.components.HourlyWeatherCard
+import com.example.weatherapp.presentation.main.main_screen.destinations.ChangeLocationScreenDestination
+import com.example.weatherapp.presentation.main.main_screen.destinations.MainScreenDestination
+import com.example.weatherapp.ui.theme.component.LoadingOverlay
+import com.example.weatherapp.ui.theme.component.PopupErrorView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.PermissionStatus
-import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.annotation.RootNavGraph
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @RequiresExtension(extension = Build.VERSION_CODES.S, version = 7)
 @Composable
+@Destination
+@RootNavGraph(start = true)
 fun MainScreen(
-    modifier: Modifier=Modifier,
-    viewModel: MainScreenViewModel,
-){
-    val state=viewModel.state.value
-    viewModel.getCurrentLocation()
-    viewModel.getWeatherByLocation()
+    navigator: DestinationsNavigator,
+    modifier: Modifier = Modifier,
+    viewModel: MainScreenViewModel= hiltViewModel(),
+) {
+    val state = viewModel.state.value
+
     MainScreenContent(
         state = state,
-        modifier=modifier,
+        modifier = modifier,
         onMenuClick = {},
-        onCityNameChanged = viewModel::getWeatherByCityName,
+        getCurrentLocation = viewModel::getCurrentLocation,
+        onChangeLocationClick = {},
+        navigateToSearchScreen = { navigator.navigate(ChangeLocationScreenDestination()) }
     )
 }
+
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun MainScreenContent(
     state: MainScreenState,
     modifier: Modifier = Modifier,
     onMenuClick: () -> Unit,
-    onCityNameChanged:(String,String)->Unit,
+    getCurrentLocation: () -> Unit,
+    onChangeLocationClick: () -> Unit,
+    navigateToSearchScreen: () -> Unit,
 ) {
-    val isFineLocationPermissionsGranted =
-        rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
-    val isCoarseLocationPermissionsGranted =
-        rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
-    val isLocationPermissionsGranted =
-        isFineLocationPermissionsGranted.status == PermissionStatus.Granted &&
-                isCoarseLocationPermissionsGranted.status == PermissionStatus.Granted
-
+    val locationPermissions = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    )
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
     val current = LocalDateTime.now().format(formatter)
-    var cityNameValue by remember { mutableStateOf("") }
 
     val normalFontSize = 25.sp
     val smallFontSize = 15.sp
@@ -94,15 +110,28 @@ private fun MainScreenContent(
         ForecastType.TOMORROW,
         ForecastType.WEEK,
     )
-    val currentCityInfo = state.weatherResponse
+
+    val currentCityInfo = state.forecast
+
+    LaunchedEffect(locationPermissions.allPermissionsGranted) {
+        if (locationPermissions.allPermissionsGranted &&
+            state.currentLocation == null
+        ) {
+            getCurrentLocation()
+        }
+    }
+    LaunchedEffect(Unit) {
+        locationPermissions.launchMultiplePermissionRequest()
+    }
 
     if (currentCityInfo != null) {
-        if(currentCityInfo.name.isNotBlank()) {
+        val cityName = currentCityInfo.city.name
+        if (cityName.isNotBlank()) {
             Box(
                 modifier = modifier
                     .fillMaxSize()
             ) {
-                if(state.isLoading) {
+                if (state.isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 Image(
@@ -114,10 +143,13 @@ private fun MainScreenContent(
                 Column(
                     modifier = Modifier
                         .padding(25.dp)
+                        .clickable {
+                            onChangeLocationClick()
+                        }
                         .align(Alignment.TopStart),
                 ) {
                     Text(
-                        text = currentCityInfo.name + ",",
+                        text = cityName + ",",
                         color = Color.White,
                         fontSize = normalFontSize,
                         fontWeight = FontWeight.W300
@@ -126,7 +158,7 @@ private fun MainScreenContent(
                     Spacer(modifier = Modifier.height(7.dp))
 
                     Text(
-                        text = currentCityInfo.sys.country,
+                        text = currentCityInfo.city.country,
                         color = Color.White,
                         fontSize = normalFontSize,
                         fontWeight = FontWeight.W300
@@ -156,19 +188,21 @@ private fun MainScreenContent(
                         .padding(bottom = 150.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    Spacer(modifier = Modifier.height(50.dp))
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         AsyncImage(
                             modifier = Modifier.size(90.dp),
-                            model = currentCityInfo.weather[0].icon,
+                            model = "https://openweathermap.org/img/wn/${currentCityInfo.list[0].weather[0].icon}@2x.png",
                             contentDescription = "",
                         )
 
                         Spacer(modifier = Modifier.width(20.dp))
 
                         Text(
-                            text = currentCityInfo.main.temp.minus(273).toInt().toString(),
+                            text = currentCityInfo.list[0].main.temp.minus(273).toInt().toString(),
                             color = Color.White,
                             fontSize = 110.sp
                         )
@@ -182,7 +216,7 @@ private fun MainScreenContent(
                         )
                     }
                     Text(
-                        text = currentCityInfo.weather[0].description,
+                        text = currentCityInfo.list[0].weather[0].description,
                         color = Color.White,
                         fontSize = normalFontSize,
                         fontWeight = FontWeight.W300
@@ -194,21 +228,22 @@ private fun MainScreenContent(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = "Humidity " + currentCityInfo.main.humidity + "%",
+                            text = "Humidity " + currentCityInfo.list[0].main.humidity + "%",
                             color = Color.White,
                             fontSize = smallFontSize,
                             fontWeight = FontWeight.W300,
                         )
 
                         Text(
-                            text = "Real Feel " + currentCityInfo.main.feels_like.minus(273).toInt() + "°",
+                            text = "Real Feel " + currentCityInfo.list[0].main.feels_like.minus(273)
+                                .toInt() + "°",
                             color = Color.White,
                             fontSize = smallFontSize,
                             fontWeight = FontWeight.W300,
                         )
 
                         Text(
-                            text = "Wind Speed " + currentCityInfo.wind.speed + " Mph",
+                            text = "Wind Speed " + currentCityInfo.list[0].wind.speed + " Mph",
                             color = Color.White,
                             fontSize = smallFontSize,
                             fontWeight = FontWeight.W300
@@ -226,39 +261,68 @@ private fun MainScreenContent(
                         thickness = 2.dp,
                         color = Color.White,
                     )
-                    ForecastMode(forecastTypesList = forecastTypesList)
+                    ForecastMode(
+                        forecastTypesList = forecastTypesList,
+                        onHourlyForecastSelected = { HourlyWeatherCard(weatherModel = currentCityInfo) },
+                        onTomorrowForecastSelected = {},
+                        onWeekForecastSelected = {},
+                    )
                 }
             }
-        }else{
-            Box(modifier = Modifier.fillMaxSize()){
-                TextField(value = cityNameValue, onValueChange ={newText->
-                    cityNameValue = newText
-
-                    onCityNameChanged(cityNameValue, Constants.API_KEY) } )
-            }
+        } else {
+            navigateToSearchScreen()
         }
     } else {
-        Box(modifier = Modifier.fillMaxSize()){
-            TextField(value = cityNameValue, onValueChange ={newText->
-                cityNameValue = newText
-
-                onCityNameChanged(cityNameValue, Constants.API_KEY) } )
-        }
+        navigateToSearchScreen()
     }
-
+    if(state.isLoading){
+        LoadingOverlay()
+    }
+    if (state.error!=null) {
+        PopupErrorView(message = state.error)
+    }
 }
 
+@RequiresExtension(extension = Build.VERSION_CODES.S, version = 7)
 @Composable
-private fun ForecastSearchScreen(
+@Destination
+fun ChangeLocationScreen(
     modifier: Modifier = Modifier,
-    state: MainScreenState,
+    navigator: DestinationsNavigator,
+    viewModel: MainScreenViewModel= hiltViewModel(),
+    id: Int = 1,
 ) {
-    var city by remember { mutableStateOf("") }
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-    ) {
-        TextField(value = city, onValueChange = { city = it })
+    val coroutineScope = rememberCoroutineScope()
+    var value by remember { mutableStateOf("") }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            TextField(
+                modifier = modifier,
+                value = value,
+                onValueChange = {
+                    value = it
+                })
+            Button(
+                modifier = Modifier.width(120.dp),
+                onClick = {
+                    coroutineScope.launch {
+                        viewModel.getWeatherByCityName(
+                            city = value,
+                            apiKey = Constants.API_KEY
+                        )
+                        navigator.navigate(MainScreenDestination())
+                    }
+                }
+            ) {
+                Text(
+                    text = "Change city",
+                    fontSize = 24.sp,
+                    color = Color.White
+                )
+            }
+        }
     }
 }
 
@@ -267,7 +331,11 @@ private fun ForecastMode(
     modifier: Modifier = Modifier,
     forecastTypesList: List<ForecastType>,
     selected: Int = 0,
-) {
+    onHourlyForecastSelected: @Composable () -> Unit,
+    onTomorrowForecastSelected: @Composable () -> Unit,
+    onWeekForecastSelected: () -> Unit,
+
+    ) {
     var selectedItemIndex by rememberSaveable {
         mutableIntStateOf(selected)
     }
@@ -293,15 +361,15 @@ private fun ForecastMode(
     }
     when (selectedItemIndex) {
         0 -> {
-
+            onHourlyForecastSelected()
         }
 
         1 -> {
-
+            onTomorrowForecastSelected()
         }
 
         2 -> {
-
+            onWeekForecastSelected()
         }
     }
 }
@@ -314,7 +382,12 @@ private fun ForecastModePreview() {
         ForecastType.TOMORROW,
         ForecastType.WEEK,
     )
-    ForecastMode(forecastTypesList = forecastTypesList)
+    ForecastMode(
+        forecastTypesList = forecastTypesList,
+        onWeekForecastSelected = {},
+        onTomorrowForecastSelected = {},
+        onHourlyForecastSelected = {},
+    )
 }
 
 @Composable

@@ -4,12 +4,11 @@ import android.location.Location
 import com.example.weatherapp.domain.model.ForecastType
 import com.example.weatherapp.domain.model.WeatherModel
 import com.example.weatherapp.R
-import com.example.weatherapp.modelka.WeatherResponse
+import com.example.weatherapp.forecastWeatherModel.Forecast
 
 data class MainScreenState(
-    var weatherResponse: WeatherResponse?=null,
+    val forecast: Forecast?=null,
     val backgroundImageId:Int=R.drawable.background,
-    val hoursForecastList: List<WeatherModel>?=null,
     val error: String? = null,
     val currentLocation: Location?=null,
     val isLoading: Boolean = false,

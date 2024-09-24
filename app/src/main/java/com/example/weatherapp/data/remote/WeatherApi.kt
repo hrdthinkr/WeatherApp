@@ -1,24 +1,22 @@
 package com.example.weatherapp.data.remote
 
 import com.example.weatherapp.common.Constants
-import com.example.weatherapp.domain.model.DayInfo
-import com.example.weatherapp.modelka.WeatherResponse
-import retrofit2.Call
+import com.example.weatherapp.currentWeatherModel.WeatherResponse
+import com.example.weatherapp.forecastWeatherModel.Forecast
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WeatherApi {
-    @GET("weather?")
+    @GET("forecast?")
     suspend fun getWeatherByCityName(
-        @Query("q") city:String,
-        @Query("appid") apiKey:String=Constants.API_KEY,
-    ): WeatherResponse
+        @Query("q") q: String,
+        @Query("appid") key: String = Constants.API_KEY,
+    ): Forecast
 
-    @GET("weather?")
+    @GET("forecast?")
     suspend fun getWeatherByLocation(
-        @Query("lat") lat:Double,
-        @Query("lon") lon:Double,
-        @Query("appid") apiKey:String=Constants.API_KEY,
-    ): WeatherResponse
-
+        @Query("lat") lat: Double,
+        @Query("lon") lon: Double,
+        @Query("appid") key: String = Constants.API_KEY,
+    ): Forecast
 }

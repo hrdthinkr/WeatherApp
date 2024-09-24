@@ -53,7 +53,7 @@ class LocationRepositoryImpl @Inject constructor(
                 addOnSuccessListener {
                     cont.resume(it) {}
                 }
-                addOnFailureListener { exception ->
+                addOnFailureListener {
                     cont.resume(null) {}
                 }
                 addOnCanceledListener {

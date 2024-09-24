@@ -1,38 +1,41 @@
-package com.example.weatherapp.modelka
+package com.example.weatherapp.forecastWeatherModel
 
 import com.google.gson.annotations.SerializedName
 
-data class WeatherResponse(
+data class Forecast(
+    @SerializedName("city")
+    val city: City,
+    @SerializedName("list")
+    val list: List<ForecastData>,
+)
+data class ForecastData(
     @SerializedName("main")
     val main: Main,
-    @SerializedName("name")
-    val name: String="",
     @SerializedName("weather")
     val weather: List<Weather>,
+    @SerializedName("dt_txt")
+    val date:String,
     @SerializedName("wind")
-    val wind: Wind,
-    @SerializedName("sys")
-    val sys:Sys,
+    val wind: Wind
 )
-
 data class Main(
+    @SerializedName("feels_like")
+    val feels_like: Double,
     @SerializedName("humidity")
     val humidity: Int,
     @SerializedName("temp")
     val temp: Double,
-    @SerializedName("feels_like")
-    val feels_like: Double,
 )
-data class Sys(
+data class City(
     @SerializedName("country")
-    val country:String,
+    val country: String,
+    @SerializedName("name")
+    val name: String,
 )
-
 data class Wind(
     @SerializedName("speed")
-    val speed: Double,
+    val speed: Double
 )
-
 data class Weather(
     @SerializedName("description")
     val description: String,
