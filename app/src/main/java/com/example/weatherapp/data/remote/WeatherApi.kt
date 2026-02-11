@@ -1,22 +1,23 @@
 package com.example.weatherapp.data.remote
 
 import com.example.weatherapp.common.Constants
-import com.example.weatherapp.currentWeatherModel.WeatherResponse
-import com.example.weatherapp.forecastWeatherModel.Forecast
+import com.example.weatherapp.secondForecast.secondForecast
 import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface WeatherApi {
-    @GET("forecast?")
+    @GET("forecast.json?")
     suspend fun getWeatherByCityName(
+        @Query("key") key: String = Constants.API_KEY,
         @Query("q") q: String,
-        @Query("appid") key: String = Constants.API_KEY,
-    ): Forecast
+        @Query("days") days:Int=10,
+    ): secondForecast
 
-    @GET("forecast?")
+    @GET("forecast.json?")
     suspend fun getWeatherByLocation(
-        @Query("lat") lat: Double,
-        @Query("lon") lon: Double,
-        @Query("appid") key: String = Constants.API_KEY,
-    ): Forecast
+        @Query("key") key: String = Constants.API_KEY,
+        @Query("q") lat: Double,
+        @Query("q") lon: Double,
+        @Query("days") days:Int=10,
+    ): secondForecast
 }

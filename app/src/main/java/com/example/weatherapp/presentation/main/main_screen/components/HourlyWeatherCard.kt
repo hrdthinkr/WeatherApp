@@ -1,12 +1,17 @@
 package com.example.weatherapp.presentation.main.main_screen.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
@@ -21,61 +26,83 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.weatherapp.R
-import com.example.weatherapp.currentWeatherModel.WeatherResponse
-import com.example.weatherapp.forecastWeatherModel.Forecast
+import com.example.weatherapp.secondForecast.Hour
+import kotlin.math.roundToInt
 
 @Composable
 fun HourlyWeatherCard(
     modifier: Modifier = Modifier,
-    weatherModel: Forecast,
-    currentIndex:Int=0,
-    color: Int = R.color.blue_800,
+    hour: Hour,
+    color: Int = R.color.blue_1200,
 ) {
-    val date=weatherModel.list[0].date
-    Card(
-        modifier = modifier
-            .width(65.dp)
-            .height(110.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = colorResource(color)
-        )
-    ) {
+    hour?.let { data ->
+        val time = data.time.substring(10)
+
         Box(modifier = Modifier.fillMaxSize()) {
             Text(
-                text = date.substring(startIndex = 11, endIndex = 15),
+                text = time,
                 color = Color.White,
-                fontSize = 9.sp,
+                fontSize = 12.sp,
                 modifier = Modifier
-                    .padding(vertical = 3.dp)
+                    .padding(vertical = 13.dp)
                     .align(Alignment.TopCenter),
             )
             Column(
-                modifier=Modifier.align(Alignment.Center),
+                modifier = Modifier.align(Alignment.Center),
+                verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 AsyncImage(
-                    modifier=Modifier.size(40.dp),
-                    model = weatherModel.list[currentIndex].weather[0].icon,
-                    contentDescription = "",
+                    modifier = Modifier.size(60.dp),
+                    model = "https:${data.condition.icon}",
+                    contentDescription = "Condition icon"
                 )
+
                 Text(
-                    text = weatherModel.list[currentIndex].main.humidity.toString() + " %",
+                    text = data.humidity.toString() + " %",
                     color = Color.White,
-                    fontSize = 6.sp,
+                    fontSize = 11.sp,
                     modifier = Modifier
                         .alpha(0.7f)
-                        .padding(vertical = 3.dp)
+
                 )
             }
             Text(
-                text = weatherModel.list[currentIndex].main.temp.toString() +"°",
+                text = data.temp_c.roundToInt().toString() + "°",
                 color = Color.White,
-                fontSize = 9.sp,
+                fontSize = 14.sp,
                 modifier = Modifier
-                    .padding(bottom = 9.dp)
+                    .padding(bottom = 11.dp)
                     .align(Alignment.BottomCenter),
             )
         }
+    }
+
+}
+
+@Composable
+fun HourlyWeatherCardsRow(
+    modifier: Modifier = Modifier,
+    list: List<Hour>,
+    color: Int = R.color.blue_1200,
+) {
+    Card(
+        modifier = modifier
+            .height(140.dp)
+            .padding(horizontal = 10.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = colorResource(color)
+        )
+    )
+    {
+        LazyRow(
+            modifier = Modifier,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            content = {
+                items(list) { item ->
+                    HourlyWeatherCard(hour = item)
+                }
+            })
     }
 }
 

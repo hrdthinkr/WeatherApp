@@ -3,8 +3,7 @@ package com.example.weatherapp.data.repository
 import com.example.weatherapp.common.Resource
 import com.example.weatherapp.data.remote.WeatherApi
 import com.example.weatherapp.domain.repository.WeatherRepository
-import com.example.weatherapp.currentWeatherModel.WeatherResponse
-import com.example.weatherapp.forecastWeatherModel.Forecast
+import com.example.weatherapp.secondForecast.secondForecast
 
 import javax.inject.Inject
 
@@ -12,14 +11,14 @@ class WeatherRepositoryImpl @Inject constructor(
     private val api: WeatherApi,
 ) : WeatherRepository {
     override suspend fun getWeatherByCityName(
+        key: String,
         city: String,
-        apiKey: String,
-    ): Resource<Forecast> {
+    ): Resource<secondForecast> {
         return try {
             Resource.Success(
                 data = api.getWeatherByCityName(
                     q = city,
-                    key = apiKey,
+                    key = key,
                 )
             )
         } catch (e: Exception) {
@@ -29,16 +28,16 @@ class WeatherRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getWeatherByLocation(
+        key: String,
         lat: Double,
         lon: Double,
-        apiKey: String,
-    ): Resource<Forecast> {
+    ): Resource<secondForecast> {
         return try {
             Resource.Success(
                 data = api.getWeatherByLocation(
+                    key = key,
                     lat = lat,
-                    lon = lon,
-                    key = apiKey,
+                    lon =lon,
                 )
             )
         } catch (e: Exception) {

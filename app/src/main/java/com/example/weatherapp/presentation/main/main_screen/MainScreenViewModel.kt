@@ -13,6 +13,8 @@ import com.example.weatherapp.data.store.CityStore
 import com.example.weatherapp.domain.repository.LocationRepository
 import com.example.weatherapp.domain.repository.WeatherRepository
 import com.example.weatherapp.forecastWeatherModel.Forecast
+import com.example.weatherapp.secondForecast.secondForecast
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -29,48 +31,49 @@ class MainScreenViewModel @Inject constructor(
     private val _state = mutableStateOf(MainScreenState())
     val state: State<MainScreenState> = _state
 
+    lateinit var navigator: DestinationsNavigator
+
     init {
         viewModelScope.launch {
             cityStore.loadWeather().collect { forecast ->
-                _state.value = _state.value.copy(
+                _state.value = MainScreenState(
                     forecast = forecast,
                 )
             }
-
         }
-
-            getWeatherByLocation()
-
+        getWeatherByLocation()
     }
 
     @RequiresExtension(extension = Build.VERSION_CODES.S, version = 7)
-    fun getWeatherByCityName(city: String, apiKey: String) = viewModelScope.launch(Dispatchers.Main) {
-            when(val result = weatherRepository.getWeatherByCityName(city, apiKey)) {
-               is Resource.Success-> {
-                   _state.value = _state.value.copy(
-                       forecast = result.data,
-                       isLoading = false,
-                       error=null,
-                   )
-                   if(result.data != null) {
-                       cityStore.save(result.data)
-                   }
+    fun getWeatherByCityName(key: String, city: String) = viewModelScope.launch(Dispatchers.Main) {
+        when (val result = weatherRepository.getWeatherByCityName(key, city)) {
+            is Resource.Success -> {
+                _state.value = _state.value.copy(
+                    forecast = result.data,
+                    isLoading = false,
+                    error = null,
+                )
+                if (result.data != null) {
+                    cityStore.save(result.data)
+                }
 
-                   Log.d("MyLog", "Message:" + state.value.forecast!!.toString())
-               }
-                is Resource.Error -> {
-                    _state.value = _state.value.copy(
-                        forecast = null,
-                        isLoading = false,
-                        error = result.message
-                    )
-                }
-                is Resource.Loading->{
-                    _state.value = _state.value.copy(
-                        isLoading = true,
-                    )
-                }
+                Log.d("MyLog", "Message:" + state.value.forecast!!.toString())
             }
+
+            is Resource.Error -> {
+                _state.value = _state.value.copy(
+                    forecast = null,
+                    isLoading = false,
+                    error = result.message
+                )
+            }
+
+            is Resource.Loading -> {
+                _state.value = _state.value.copy(
+                    isLoading = true,
+                )
+            }
+        }
     }
 
     @RequiresExtension(extension = Build.VERSION_CODES.S, version = 7)
@@ -82,17 +85,23 @@ class MainScreenViewModel @Inject constructor(
                     error = null
                 )
                 locationRepository.getCurrentLocation()?.let { location ->
-                    when(val result = weatherRepository.getWeatherByLocation(
-                        location.latitude,
-                        location.longitude,
-                        apiKey = Constants.API_KEY
+                    when (val result = weatherRepository.getWeatherByLocation(
+                        key = Constants.API_KEY,
+                        lat = location.latitude,
+                        lon = location.longitude,
                     )) {
-                        is Resource.Success-> {
+                        is Resource.Success -> {
                             _state.value = _state.value.copy(
                                 forecast = result.data,
                             )
+                            Log.d(
+                                "MyLog",
+                                "Message:by location" + state.value.forecast!!.toString()
+                            )
                             result.data?.let { saveWeather(it) }
+                            Log.d("MyLog", "Message:" + state.value.forecast!!.toString())
                         }
+
                         is Resource.Error -> {
                             _state.value = _state.value.copy(
                                 forecast = null,
@@ -100,11 +109,13 @@ class MainScreenViewModel @Inject constructor(
                                 error = result.message
                             )
                         }
-                        is Resource.Loading->{
+
+                        is Resource.Loading -> {
                             _state.value = _state.value.copy(
                                 isLoading = true,
                             )
                         }
+
                     }
                 } ?: kotlin.run {
                     _state.value = _state.value.copy(
@@ -117,7 +128,7 @@ class MainScreenViewModel @Inject constructor(
             }
         }
 
-    private suspend fun saveWeather(forecast: Forecast) {
+    private fun saveWeather(forecast: secondForecast) {
         viewModelScope.launch {
             cityStore.save(forecast)
         }

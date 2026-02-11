@@ -5,7 +5,9 @@ plugins {
     id("kotlin-kapt")
     id("com.google.devtools.ksp")
 }
-
+kotlin{
+    task("testClasses")
+}
 android {
     namespace = "com.example.weatherapp"
     compileSdk = 34

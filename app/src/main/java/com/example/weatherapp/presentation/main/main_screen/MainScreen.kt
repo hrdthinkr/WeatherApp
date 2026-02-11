@@ -41,6 +41,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,9 +50,8 @@ import coil.compose.AsyncImage
 import com.example.weatherapp.R
 import com.example.weatherapp.common.Constants
 import com.example.weatherapp.domain.model.ForecastType
-import com.example.weatherapp.presentation.main.main_screen.components.HourlyWeatherCard
-import com.example.weatherapp.presentation.main.main_screen.destinations.ChangeLocationScreenDestination
-import com.example.weatherapp.presentation.main.main_screen.destinations.MainScreenDestination
+import com.example.weatherapp.presentation.main.destinations.WeeklyForecastScreenDestination
+import com.example.weatherapp.presentation.main.main_screen.components.HourlyWeatherCardsRow
 import com.example.weatherapp.ui.theme.component.LoadingOverlay
 import com.example.weatherapp.ui.theme.component.PopupErrorView
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -61,6 +62,7 @@ import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 @RequiresExtension(extension = Build.VERSION_CODES.S, version = 7)
 @Composable
@@ -69,7 +71,7 @@ import java.time.format.DateTimeFormatter
 fun MainScreen(
     navigator: DestinationsNavigator,
     modifier: Modifier = Modifier,
-    viewModel: MainScreenViewModel= hiltViewModel(),
+    viewModel: MainScreenViewModel = hiltViewModel(),
 ) {
     val state = viewModel.state.value
 
@@ -78,8 +80,8 @@ fun MainScreen(
         modifier = modifier,
         onMenuClick = {},
         getCurrentLocation = viewModel::getCurrentLocation,
-        onChangeLocationClick = {},
-        navigateToSearchScreen = { navigator.navigate(ChangeLocationScreenDestination()) }
+        onChangeLocationClick = { },
+        onWeekButtonClick = { navigator.navigate(direction = WeeklyForecastScreenDestination(id = 2)) }
     )
 }
 
@@ -91,7 +93,7 @@ private fun MainScreenContent(
     onMenuClick: () -> Unit,
     getCurrentLocation: () -> Unit,
     onChangeLocationClick: () -> Unit,
-    navigateToSearchScreen: () -> Unit,
+    onWeekButtonClick: () -> Unit,
 ) {
     val locationPermissions = rememberMultiplePermissionsState(
         permissions = listOf(
@@ -99,10 +101,10 @@ private fun MainScreenContent(
             Manifest.permission.ACCESS_FINE_LOCATION
         )
     )
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    val formatter = DateTimeFormatter.ofPattern("dd MMMM, HH:mm")
     val current = LocalDateTime.now().format(formatter)
 
-    val normalFontSize = 25.sp
+    val normalFontSize = 18.sp
     val smallFontSize = 15.sp
 
     val forecastTypesList = listOf(
@@ -110,8 +112,6 @@ private fun MainScreenContent(
         ForecastType.TOMORROW,
         ForecastType.WEEK,
     )
-
-    val currentCityInfo = state.forecast
 
     LaunchedEffect(locationPermissions.allPermissionsGranted) {
         if (locationPermissions.allPermissionsGranted &&
@@ -123,163 +123,196 @@ private fun MainScreenContent(
     LaunchedEffect(Unit) {
         locationPermissions.launchMultiplePermissionRequest()
     }
+    state.forecast?.let { data ->
+        val cityName = data.location.name
+        Box(
+            modifier = modifier
+                .fillMaxSize(),
 
-    if (currentCityInfo != null) {
-        val cityName = currentCityInfo.city.name
-        if (cityName.isNotBlank()) {
-            Box(
-                modifier = modifier
-                    .fillMaxSize()
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                Image(
-                    modifier = Modifier.fillMaxSize(),
-                    painter = painterResource(id = R.drawable.background),
-                    contentScale = ContentScale.FillBounds,
-                    contentDescription = ""
-                )
-                Column(
-                    modifier = Modifier
-                        .padding(25.dp)
-                        .clickable {
-                            onChangeLocationClick()
-                        }
-                        .align(Alignment.TopStart),
-                ) {
-                    Text(
-                        text = cityName + ",",
-                        color = Color.White,
-                        fontSize = normalFontSize,
-                        fontWeight = FontWeight.W300
-                    )
-
-                    Spacer(modifier = Modifier.height(7.dp))
-
-                    Text(
-                        text = currentCityInfo.city.country,
-                        color = Color.White,
-                        fontSize = normalFontSize,
-                        fontWeight = FontWeight.W300
-                    )
-
-                    Spacer(modifier = Modifier.height(5.dp))
-
-                    Text(
-                        modifier = Modifier.alpha(0.6f),
-                        text = current,
-                        color = Color.White,
-                    )
-                }
-                Icon(
-                    modifier = Modifier
-                        .padding(20.dp)
-                        .clickable { onMenuClick() }
-                        .size(30.dp)
-                        .align(Alignment.TopEnd),
-                    imageVector = Icons.Outlined.Menu,
-                    tint = Color.White,
-                    contentDescription = "menu",
-                )
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(bottom = 150.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(modifier = Modifier.height(50.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AsyncImage(
-                            modifier = Modifier.size(90.dp),
-                            model = "https://openweathermap.org/img/wn/${currentCityInfo.list[0].weather[0].icon}@2x.png",
-                            contentDescription = "",
-                        )
-
-                        Spacer(modifier = Modifier.width(20.dp))
-
-                        Text(
-                            text = currentCityInfo.list[0].main.temp.minus(273).toInt().toString(),
-                            color = Color.White,
-                            fontSize = 110.sp
-                        )
-
-                        Text(
-                            modifier = Modifier.padding(bottom = 20.dp),
-                            text = "°",
-                            fontWeight = FontWeight.W300,
-                            color = Color.White,
-                            fontSize = 70.sp
-                        )
+        ) {
+            if (state.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            Image(
+                modifier = Modifier.fillMaxSize(),
+                painter = painterResource(id = R.drawable.background),
+                contentScale = ContentScale.FillBounds,
+                contentDescription = ""
+            )
+            Column(
+                modifier = Modifier
+                    .padding(top=40.dp, start = 35.dp)
+                    .clickable {
+                        onChangeLocationClick()
                     }
-                    Text(
-                        text = currentCityInfo.list[0].weather[0].description,
-                        color = Color.White,
-                        fontSize = normalFontSize,
-                        fontWeight = FontWeight.W300
-                    )
-
-                    Spacer(modifier = Modifier.height(50.dp))
-
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+                    .align(Alignment.TopStart),
+            ) {
+                Text(
+                    text = "$cityName,",
+                    color = Color.White,
+                    fontSize = normalFontSize,
+                    fontWeight = FontWeight.W300
+                )
+                data.location?.country.let {
+                    if (it != null) {
                         Text(
-                            text = "Humidity " + currentCityInfo.list[0].main.humidity + "%",
+                            text = it,
                             color = Color.White,
-                            fontSize = smallFontSize,
-                            fontWeight = FontWeight.W300,
-                        )
-
-                        Text(
-                            text = "Real Feel " + currentCityInfo.list[0].main.feels_like.minus(273)
-                                .toInt() + "°",
-                            color = Color.White,
-                            fontSize = smallFontSize,
-                            fontWeight = FontWeight.W300,
-                        )
-
-                        Text(
-                            text = "Wind Speed " + currentCityInfo.list[0].wind.speed + " Mph",
-                            color = Color.White,
-                            fontSize = smallFontSize,
+                            fontSize = normalFontSize,
                             fontWeight = FontWeight.W300
                         )
                     }
-                    Spacer(
+                }
+
+                Spacer(modifier = Modifier.height(5.dp))
+
+                Text(
+                    modifier = Modifier.alpha(0.6f),
+                    text = current,
+                    color = Color.White,
+                )
+            }
+            Icon(
+                modifier = Modifier
+                    .padding(top=35.dp,end=35.dp)
+                    .clickable { onMenuClick() }
+                    .size(25.dp)
+                    .align(Alignment.TopEnd),
+                imageVector = Icons.Outlined.Menu,
+                tint = Color.White,
+                contentDescription = "menu",
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(modifier = Modifier.weight(1.0f))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AsyncImage(
                         modifier = Modifier
-                            .height(60.dp)
+                            .size(140.dp),
+                        model = "https:${data.current.condition.icon}",
+                        contentDescription = "Condition icon"
                     )
 
-                    Divider(
-                        modifier = Modifier
-                            .alpha(0.2f)
-                            .padding(horizontal = 25.dp),
-                        thickness = 2.dp,
+                    Text(
+                        text = data.current.temp_c.roundToInt().toString(),
                         color = Color.White,
+                        fontWeight = FontWeight.W300,
+                        fontSize = 80.sp
                     )
-                    ForecastMode(
-                        forecastTypesList = forecastTypesList,
-                        onHourlyForecastSelected = { HourlyWeatherCard(weatherModel = currentCityInfo) },
-                        onTomorrowForecastSelected = {},
-                        onWeekForecastSelected = {},
+
+                    Text(
+                        modifier = Modifier.padding(bottom = 20.dp),
+                        text = "°",
+                        fontWeight = FontWeight.W300,
+                        color = Color.White,
+                        fontSize = 70.sp
+                    )
+
+                }
+                Spacer(modifier = Modifier.weight(1.0f))
+
+                Text(
+                    text = data.current.condition.text,
+                    color = Color.White,
+                    fontSize = normalFontSize,
+                    fontWeight = FontWeight.W300
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SmallRowWithIcon(
+                        iconId = R.drawable.humidity,
+                        text = "Humidity " + data.current.humidity + "%",
+                        fontSize = smallFontSize,
+                    )
+
+                    SmallRowWithIcon(
+                        iconId = R.drawable.temperature,
+                        iconSize = 20,
+                        text = "Real Feel " + data.current.feelslike_c.toInt() + "°",
+                        fontSize = smallFontSize,
+                    )
+
+                    SmallRowWithIcon(
+                        iconId = R.drawable.wind,
+                        iconSize = 20,
+                        text = "Wind Speed " + data.current.wind_mph + " Mph",
+                        fontSize = smallFontSize
                     )
                 }
+                Spacer(
+                    modifier = Modifier
+                        .height(60.dp)
+                )
+
+                Divider(
+                    modifier = Modifier
+                        .alpha(0.2f)
+                        .padding(horizontal = 25.dp),
+                    thickness = 2.dp,
+                    color = Color.White,
+                )
+                ForecastMode(
+                    forecastTypesList = forecastTypesList,
+                    onHourlyForecastSelected = {
+                        HourlyWeatherCardsRow(list = data.forecast.forecastday[0].hour)
+                    },
+                    onTomorrowForecastSelected = {
+                        HourlyWeatherCardsRow(list = data.forecast.forecastday[1].hour)
+                    },
+                    onWeekForecastSelected = {
+                        onWeekButtonClick()
+                    },
+                )
+                Spacer(
+                    modifier = Modifier
+                        .weight(1f)
+                )
             }
-        } else {
-            navigateToSearchScreen()
         }
-    } else {
-        navigateToSearchScreen()
     }
-    if(state.isLoading){
+
+    if (state.isLoading) {
         LoadingOverlay()
     }
-    if (state.error!=null) {
+    if (state.error != null) {
         PopupErrorView(message = state.error)
+    }
+}
+
+@Composable
+private fun SmallRowWithIcon(
+    modifier: Modifier = Modifier,
+    iconId: Int,
+    text: String,
+    iconSize:Int=23,
+    fontSize: TextUnit,
+) {
+    Row(
+        modifier = modifier,
+    ) {
+        Icon(
+            modifier = Modifier.size(iconSize.dp),
+            tint = Color.White,
+            painter = painterResource(id = iconId), contentDescription = "icon"
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            fontSize = fontSize,
+            color = Color.White,
+            fontWeight = FontWeight.W300
+        )
     }
 }
 
@@ -288,18 +321,15 @@ private fun MainScreenContent(
 @Destination
 fun ChangeLocationScreen(
     modifier: Modifier = Modifier,
-    navigator: DestinationsNavigator,
-    viewModel: MainScreenViewModel= hiltViewModel(),
-    id: Int = 1,
+    viewModel: MainScreenViewModel = hiltViewModel(),
 ) {
     val coroutineScope = rememberCoroutineScope()
     var value by remember { mutableStateOf("") }
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.align(Alignment.Center)
         ) {
             TextField(
-                modifier = modifier,
                 value = value,
                 onValueChange = {
                     value = it
@@ -310,9 +340,9 @@ fun ChangeLocationScreen(
                     coroutineScope.launch {
                         viewModel.getWeatherByCityName(
                             city = value,
-                            apiKey = Constants.API_KEY
+                            key = Constants.API_KEY
                         )
-                        navigator.navigate(MainScreenDestination())
+
                     }
                 }
             ) {
@@ -334,8 +364,7 @@ private fun ForecastMode(
     onHourlyForecastSelected: @Composable () -> Unit,
     onTomorrowForecastSelected: @Composable () -> Unit,
     onWeekForecastSelected: () -> Unit,
-
-    ) {
+) {
     var selectedItemIndex by rememberSaveable {
         mutableIntStateOf(selected)
     }

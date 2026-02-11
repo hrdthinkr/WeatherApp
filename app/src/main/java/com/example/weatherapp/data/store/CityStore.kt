@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.weatherapp.forecastWeatherModel.Forecast
+import com.example.weatherapp.secondForecast.secondForecast
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
@@ -39,18 +40,18 @@ class CityStore @Inject constructor(@ApplicationContext private val context: Con
         .create()
 
 
-    suspend fun save(forecast: Forecast) {
-        val forecastJsonString = gson.toJson(forecast, Forecast::class.java)
+    suspend fun save(forecast: secondForecast) {
+        val forecastJsonString = gson.toJson(forecast, secondForecast::class.java)
         context.dataStore.edit { preferences ->
             preferences[FORECAST_KEY]=forecastJsonString
         }
     }
 
-    fun loadWeather(): Flow<Forecast?> =
+    fun loadWeather(): Flow<secondForecast?> =
         context.dataStore.data.map { preference ->
             val weatherJsonString = preference[FORECAST_KEY] ?: null
             if (weatherJsonString!=null) {
-                gson.fromJson(weatherJsonString, Forecast::class.java)
+                gson.fromJson(weatherJsonString, secondForecast::class.java)
             } else {
                 null
             }

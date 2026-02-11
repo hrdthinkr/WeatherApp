@@ -1,6 +1,6 @@
 package com.example.weatherapp.common
 
 object Constants {
-    const val BASE_URL="https://api.openweathermap.org/data/2.5/"
-    const val API_KEY="fd850a19d4e721ba221642b638e4eda7"
+    const val BASE_URL="http://api.weatherapi.com/v1/"
+    const val API_KEY="bf46e8e49a724c8e8a151755253108"
 }
