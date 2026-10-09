@@ -38,7 +38,11 @@ fun HourlyWeatherCard(
     hour?.let { data ->
         val time = data.time.substring(10)
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = modifier
+                .width(75.dp)
+                .fillMaxSize()
+        ) {
             Text(
                 text = time,
                 color = Color.White,
@@ -97,7 +101,7 @@ fun HourlyWeatherCardsRow(
     {
         LazyRow(
             modifier = Modifier,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(25.dp),
             content = {
                 items(list) { item ->
                     HourlyWeatherCard(hour = item)

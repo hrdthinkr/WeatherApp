@@ -93,6 +93,7 @@ class MainScreenViewModel @Inject constructor(
                         is Resource.Success -> {
                             _state.value = _state.value.copy(
                                 forecast = result.data,
+                                isLoading = false,
                             )
                             Log.d(
                                 "MyLog",

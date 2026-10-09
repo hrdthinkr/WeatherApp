@@ -10,7 +10,7 @@ kotlin{
 }
 android {
     namespace = "com.example.weatherapp"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.weatherapp"
@@ -123,4 +123,7 @@ android {
         // Permissions
         implementation("com.google.accompanist:accompanist-permissions:0.31.1-alpha")
     }
+}
+dependencies {
+    implementation("androidx.compose.ui:ui-graphics:1.12.1")
 }

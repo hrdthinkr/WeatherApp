@@ -13,11 +13,10 @@ interface WeatherApi {
         @Query("days") days:Int=10,
     ): secondForecast
 
-    @GET("forecast.json?")
+    @GET("forecast.json")
     suspend fun getWeatherByLocation(
         @Query("key") key: String = Constants.API_KEY,
-        @Query("q") lat: Double,
-        @Query("q") lon: Double,
-        @Query("days") days:Int=10,
+        @Query("q") location: String,
+        @Query("days") days: Int = 7,
     ): secondForecast
 }

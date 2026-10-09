@@ -36,8 +36,7 @@ class WeatherRepositoryImpl @Inject constructor(
             Resource.Success(
                 data = api.getWeatherByLocation(
                     key = key,
-                    lat = lat,
-                    lon =lon,
+                    location = "$lat,$lon",
                 )
             )
         } catch (e: Exception) {
